@@ -177,7 +177,8 @@ if st.button("Train Model and Predict"):
             st.subheader("Probability Breakdown")
             with prob_col1:
                 st.metric(label="Probability of AKI", value=f"{prediction_proba[1]*100:.1f}%")
-                
+            with prob_col2:
+                st.metric(label="Probability of AKI", value=f"{prediction_proba[1]*100:.1f}%")    
         except Exception as e:
             st.error(f"An error occurred during model training or prediction: {str(e)}")
             st.error("Please check if all input values are valid and try again.")
