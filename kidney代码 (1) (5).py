@@ -6,6 +6,7 @@ from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
 from sklearn.svm import SVC
+from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import train_test_split
 
 # --- Set wide layout ---
@@ -18,9 +19,10 @@ st.set_page_config(layout="wide")
 try:
     df = pd.read_excel('502纳入.xlsx')
 except FileNotFoundError:
-    st.error("Error, file not found")
+    st.error("Error: File '502纳入.xlsx' not found. Please ensure it's in the same directory.")
     st.stop()
 
+# Rename columns
 df.rename(columns={'SOFA':'SOFA',
                    'PO2/FiO2':'PO2/FiO2(mmHg)',
                    'K': 'K(mmol/L)',
@@ -33,32 +35,37 @@ df.rename(columns={'SOFA':'SOFA',
 
 # Define variables
 continuous_vars = [
-'SOFA',
-'PO2/FiO2(mmHg)',
-'K(mmol/L)',
-'24-hour fluid balnce(ml)',
-'Cr(umol/L)',
-'D-Dimer(mg/L)',
-'AST(IU/L)',
-'GLU(mmol/L)',
-'pH',
+    'SOFA',
+    'PO2/FiO2(mmHg)',
+    'K(mmol/L)',
+    '24-hour fluid balnce(ml)',
+    'Cr(umol/L)',
+    'D-Dimer(mg/L)',
+    'AST(IU/L)',
+    'GLU(mmol/L)',
+    'pH',
 ]
 
 # Combine all variables for unified input
-all_vars = continuous_vars 
+all_vars = continuous_vars
+
+# Check if all required columns exist
+missing_cols = [col for col in all_vars + ['急性肾衰竭'] if col not in df.columns]
+if missing_cols:
+    st.error(f"Error: The following columns are missing from the dataset: {missing_cols}")
+    st.stop()
 
 # Preprocessing pipeline
 preprocessor = ColumnTransformer(
     transformers=[
         ('num', StandardScaler(), continuous_vars),
-        ])
+    ])
 
 # Apply preprocessing
-X_processed = preprocessor.fit_transform(df)
+X_processed = preprocessor.fit_transform(df[continuous_vars])
 
 # Get feature names
-try:
-    feature_names =  continuous_vars 
+feature_names = continuous_vars
 
 X_processed_df = pd.DataFrame(X_processed, columns=feature_names)
 X = X_processed_df
@@ -67,121 +74,168 @@ y = df['急性肾衰竭']
 # Train-test split
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=999)
 
-
 # --- Streamlit App Interface ---
 
 # Centered Title
-st.markdown("<h1 style='text-align: center;'>Support Vector Machine model for predicting ARDS patients with Late acute AKI</h1>", unsafe_allow_html=True)
+st.markdown("<h1 style='text-align: center;'>Logistic Regression Model for Predicting AKI Secondary to ARDS </h1>", unsafe_allow_html=True)
 
 # --- 1. User Input for X values (Unified, 3 columns) ---
 st.header("1. Enter Patient Data")
 
-user_input = {} # summarize user input data
-input_valid = True # Flag to check if all inputs are valid
+user_input = {}
+input_valid = True
+
 # Create input fields for all variables in 3 columns
-# Combine continuous and categorical for unified handling in layout
-input_cols = st.columns(3) # Changed to 3 columns
+input_cols = st.columns(3)
 for i, var in enumerate(all_vars):
-    with input_cols[i % 3]: # Cycle through 3 columns
-        if var in continuous_vars:
-            # Handle continuous variables - No default value
-            if var =="FiO2":
-                user_val = st.number_input(f"{var}",value=None,format="%.4f", step=0.01, placeholder="please enter,e.g.,0.6")
-            else:
-                user_val = st.number_input(f"{var}", value=None, format="%.4f",step=0.01, placeholder="please enter")
-            if user_val is None:
-                input_valid = False
-                #st.warning(f"请输入 {var} 的值")
-            user_input[var] = user_val
-        else: # Handle categorical variables
-            # Get categories for categorical variables
-            fitted_encoder = preprocessor.named_transformers_['cat']
-            try:
-                # Find the index of the categorical variable in the transformer's input list
-                cat_var_index = categorical_vars.index(var)
-                options = fitted_encoder.categories_[cat_var_index]
-            except (AttributeError, ValueError, IndexError):
-                # Fallback if categories_ is not directly available or index error
-                options = np.unique(df[var].astype(str))
-            # Default to the first category or a placeholder
-            # UI - No default selection, user must choose
-            selected_option = st.selectbox(f"{var}", options=options, index=None, placeholder="please enter")
-            if selected_option is None:
-                input_valid = False
-                #st.warning(f"请选择 {var} 的值")
-            user_input[var] = selected_option
+    with input_cols[i % 3]:
+        # Handle different variables with appropriate ranges
+        if var == "SOFA":
+            user_val = st.number_input(f"{var}", min_value=0.0, max_value=24.0, value=None, step=1.0, placeholder="e.g., 6.0")
+        elif var == "PO2/FiO2(mmHg)":
+            user_val = st.number_input(f"{var}", min_value=0.0, value=None, step=0.01, placeholder="e.g., 200.0")
+        elif var == "K(mmol/L)":
+            user_val = st.number_input(f"{var}", min_value=0.0, max_value=10.0, value=None, step=0.01, placeholder="e.g., 4.0")
+        elif var == "24-hour fluid balnce(ml)":
+            user_val = st.number_input(f"{var}", value=None, step=0.01, placeholder="e.g., 1500.0")
+        elif var == "Cr(umol/L)":
+            user_val = st.number_input(f"{var}", min_value=0.0, value=None, step=0.01, placeholder="e.g., 100.0")
+        elif var == "D-Dimer(mg/L)":
+            user_val = st.number_input(f"{var}", min_value=0.0, value=None, step=0.01, placeholder="e.g., 1.5")
+        elif var == "AST(IU/L)":
+            user_val = st.number_input(f"{var}", min_value=0.0, value=None, step=0.01, placeholder="e.g., 40.0")
+        elif var == "GLU(mmol/L)":
+            user_val = st.number_input(f"{var}", min_value=0.0, max_value=50.0, value=None, step=0.01, placeholder="e.g., 6.0")
+        elif var == "pH":
+            user_val = st.number_input(f"{var}", min_value=6.5, max_value=8.0, value=None, step=0.01, placeholder="e.g., 7.4")
+        else:
+            user_val = st.number_input(f"{var}", value=None, step=0.01, placeholder="please enter")
+        
+        if user_val is None:
+            input_valid = False
+        user_input[var] = user_val
 
-# --- 2. Model Parameter Display (Fixed, no user selection) ---
-#st.header("2. Model Parameters (Fixed)")
+# --- 2. Model Parameter Display ---
+st.header("2. Model Parameters")
 
-# Display fixed parameters
-# Store fixed parameters
-#FIXED_KERNEL = 'linear'
-#FIXED_C = 1.0
-#FIXED_CLASS_WEIGHT = 'balanced'
-
-#col1, col2, col3 = st.columns(3)
-#with col1:
-    #st.metric(label="Kernel", value=FIXED_KERNEL)
-#with col2:
- #   st.metric(label="Regularization Parameter (C)", value=FIXED_C )
-#with col3:
- #   st.metric(label="Class Weight", value=FIXED_CLASS_WEIGHT)
+# Display model information
+st.info("""
+**Model Type:** Logistic Regression with L2 regularization  
+**Class Weight:** Balanced (to handle imbalanced classes)  
+**Test Size:** 30% of data held out for testing  
+**Random State:** 999 (for reproducibility)
+""")
 
 # --- 3. Prediction Button and Logic ---
 if st.button("Train Model and Predict"):
     if not input_valid:
-        st.error("error, please check all X is inputed")
+        st.error("Error: Please fill in all the required fields.")
     else:
         # Create a DataFrame from user input
         input_data = pd.DataFrame([user_input])
-
-        # --- Train the model with fixed parameters ---
+        
+        # --- Train the model ---
         try:
-            # Use the train/test split defined earlier
-            # model
+            # Initialize and train the model
             model = LogisticRegression(
-            random_state=999,
-            penalty='l2',
-            class_weight='balanced')
-            model.fit(X_train, y_train) # Train on the training set
-            st.success("Model trained successfully with fixed parameters!")
-
-            # Apply the same preprocessing pipeline to input data
+                random_state=999,
+                penalty='l2',
+                class_weight='balanced',
+            )
+            
+            with st.spinner("Training model..."):
+                model.fit(X_train, y_train)
+            
+            st.success("Model trained successfully!")
+            
+            # Display training accuracy
+            train_accuracy = model.score(X_train, y_train)
+            test_accuracy = model.score(X_test, y_test)
+            
+            col1, col2 = st.columns(2)
+            with col1:
+                st.metric(label="Training Accuracy", value=f"{train_accuracy:.2%}")
+            with col2:
+                st.metric(label="Test Accuracy", value=f"{test_accuracy:.2%}")
+            
+            # Apply the same preprocessing to input data
             input_processed = preprocessor.transform(input_data)
-
-            # Make prediction using the newly trained model
-            # Prediction probabilities
-            prediction_proba = svc.predict_proba(input_processed)[0]
+            
+            # Make prediction
+            prediction = model.predict(input_processed)[0]
+            prediction_proba = model.predict_proba(input_processed)[0]
             
             # Display results
             st.header("Prediction Result")
-            # Assuming class 1 is 'Acute Kidney Injury'
-            prob_label = "Predicted Probability of Acute Kidney Injury"
-            st.metric(label=prob_label, value=f"{prediction_proba[1]*100:.2f}%") # Displaying probability of class 1
-
+            
+            # Create two columns for results display
+            result_col1, result_col2 = st.columns(2)
+            
+            with result_col1:
+                if prediction == 1:
+                    st.error("**Prediction: Acute Kidney Injury (AKI)**")
+                else:
+                    st.success("**Prediction: No Acute Kidney Injury**")
+            
+            with result_col2:
+                prob_aki = prediction_proba[1] * 100
+                st.metric(
+                    label="Probability of Acute Kidney Injury", 
+                    value=f"{prob_aki:.1f}%",
+                    delta=f"{(prob_aki - 50):+.1f}%" if prob_aki != 50 else None
+                )
+            
+            # Display probability breakdown
+            st.subheader("Probability Breakdown")
+            prob_col1, prob_col2 = st.columns(2)
+            with prob_col1:
+                st.metric(label="Probability of No AKI", value=f"{prediction_proba[0]*100:.1f}%")
+            with prob_col2:
+                st.metric(label="Probability of AKI", value=f"{prediction_proba[1]*100:.1f}%")
+                
         except Exception as e:
-            st.error(f"An error occurred during model training or prediction: {e}")
+            st.error(f"An error occurred during model training or prediction: {str(e)}")
+            st.error("Please check if all input values are valid and try again.")
 
+# --- 4. Data Summary ---
+with st.expander("View Data Summary"):
+    st.subheader("Dataset Overview")
+    st.write(f"Total samples: {len(df)}")
+    st.write(f"Number of features: {len(continuous_vars)}")
+    
+    # Class distribution
+    st.subheader("Class Distribution")
+    class_counts = df['急性肾衰竭'].value_counts()
+    st.write(f"Patients without AKI (0): {class_counts.get(0, 0)}")
+    st.write(f"Patients with AKI (1): {class_counts.get(1, 0)}")
+    
+    # Display first few rows
+    st.subheader("First 5 Rows of Data")
+    st.dataframe(df.head())
 
 # --- Disclaimer Section at the Bottom ---
 st.markdown("---") # Horizontal line separator
-disclaimer_text = """
-**Disclaimer:**
+st.header("Disclaimer and Data Definitions")
 
-Supplement:
-*  AST : Peak AST value within the first 24 hours of ICU admission.
-*  Cr : Peak Cr value within the first 24 hours of ICU admission.
-*  GLU : Peak venous blood glucose level within the first 24 hours of ICU admission.
-*  K+ : Peak serum potassium level within the first 24 hours of ICU admission.
-*  D-Dimer : Peak D-Dimer level within the first 24 hours of ICU admission.
-*  SOFA : SOFA within the first 24 hours of ICU admission.
-*  pH : pH value from arterial blood gas obtained within 24 hours post-ICU admission.
-*  PO2/FiO2 : PO2/FiO2 value from arterial blood gas obtained within 24 hours post-ICU admission.
-*  24-hour fluid balance : The fluid balance (input-output) for the first 24 hours in the ICU.
+disclaimer_text = """
+**Clinical Note:** This tool provides a predictive assessment based on statistical modeling and should be used as a decision support aid only. Clinical judgment should always supersede algorithmic predictions.
+
+**Variable Definitions (measured within first 24 hours of ICU admission):**
+
+* **AST**: Peak AST (aspartate aminotransferase) value
+* **Cr**: Peak creatinine value  
+* **GLU**: Peak venous blood glucose level
+* **K+**: Peak serum potassium level
+* **D-Dimer**: Peak D-Dimer level
+* **SOFA**: Sequential Organ Failure Assessment score
+* **pH**: pH value from arterial blood gas
+* **PO2/FiO2**: Ratio of partial pressure of oxygen to fraction of inspired oxygen from arterial blood gas
+* **24-hour fluid balance**: Net fluid balance (input minus output)
+
+#**Note:** All laboratory values represent peak measurements during the first 24 hours following ICU admission.
 """
 st.markdown(disclaimer_text)
 
-
-
-
+# Add footer
+st.markdown("---")
+st.markdown("<div style='text-align: center; color: gray;'>AKI Prediction Tool v1.0 | For clinical decision support only</div>", unsafe_allow_html=True)
