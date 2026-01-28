@@ -58,15 +58,7 @@ X_processed = preprocessor.fit_transform(df)
 
 # Get feature names
 try:
-    feature_names = (
-        continuous_vars +
-        list(preprocessor.named_transformers_['cat'].get_feature_names_out(categorical_vars))
-    )
-except AttributeError:
-    feature_names = (
-        continuous_vars +
-        list(preprocessor.named_transformers_['cat'].get_feature_names(categorical_vars))
-    )
+    feature_names =  continuous_vars 
 
 X_processed_df = pd.DataFrame(X_processed, columns=feature_names)
 X = X_processed_df
