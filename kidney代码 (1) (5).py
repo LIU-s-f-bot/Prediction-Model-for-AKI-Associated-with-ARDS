@@ -148,16 +148,6 @@ if st.button("Train Model and Predict"):
             
             st.success("Model trained successfully!")
             
-            # Display training accuracy
-            train_accuracy = model.score(X_train, y_train)
-            test_accuracy = model.score(X_test, y_test)
-            
-            col1, col2 = st.columns(2)
-            with col1:
-                st.metric(label="Training Accuracy", value=f"{train_accuracy:.2%}")
-            with col2:
-                st.metric(label="Test Accuracy", value=f"{test_accuracy:.2%}")
-            
             # Apply the same preprocessing to input data
             input_processed = preprocessor.transform(input_data)
             
@@ -187,31 +177,13 @@ if st.button("Train Model and Predict"):
             
             # Display probability breakdown
             st.subheader("Probability Breakdown")
-            prob_col1, prob_col2 = st.columns(2)
             with prob_col1:
-                st.metric(label="Probability of No AKI", value=f"{prediction_proba[0]*100:.1f}%")
-            with prob_col2:
                 st.metric(label="Probability of AKI", value=f"{prediction_proba[1]*100:.1f}%")
                 
         except Exception as e:
             st.error(f"An error occurred during model training or prediction: {str(e)}")
             st.error("Please check if all input values are valid and try again.")
 
-# --- 4. Data Summary ---
-with st.expander("View Data Summary"):
-    st.subheader("Dataset Overview")
-    st.write(f"Total samples: {len(df)}")
-    st.write(f"Number of features: {len(continuous_vars)}")
-    
-    # Class distribution
-    st.subheader("Class Distribution")
-    class_counts = df['急性肾衰竭'].value_counts()
-    st.write(f"Patients without AKI (0): {class_counts.get(0, 0)}")
-    st.write(f"Patients with AKI (1): {class_counts.get(1, 0)}")
-    
-    # Display first few rows
-    st.subheader("First 5 Rows of Data")
-    st.dataframe(df.head())
 
 # --- Disclaimer Section at the Bottom ---
 st.markdown("---") # Horizontal line separator
@@ -232,7 +204,7 @@ disclaimer_text = """
 * **PO2/FiO2**: Ratio of partial pressure of oxygen to fraction of inspired oxygen from arterial blood gas
 * **24-hour fluid balance**: Net fluid balance (input minus output)
 
-#**Note:** All laboratory values represent peak measurements during the first 24 hours following ICU admission.
+
 """
 st.markdown(disclaimer_text)
 
