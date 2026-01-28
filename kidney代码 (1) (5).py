@@ -14,46 +14,44 @@ st.set_page_config(layout="wide")
 # --- Your Provided Code (Adapted for Streamlit) ---
 
 # Load data
-# Note: Ensure '5.19交集特征.xlsx' is in the same directory or provide the full path
+# Note: Ensure '502纳入.xlsx' is in the same directory or provide the full path
 try:
-    df = pd.read_excel('5.19交集特征.xlsx')
+    df = pd.read_excel('502纳入.xlsx')
 except FileNotFoundError:
     st.error("Error, file not found")
     st.stop()
 
-df.rename(columns={"入选时FiO2":"FiO2",
-                   "APACHE Ⅱ score_at the time of inclusion":"APACHE II",
-                  "Lym_D1":"Lym(*10^9/L)_D1",
-                  "BUN(mmolL)_D2":"BUN(mmol/L)_D2",
-                  "Cl(mmolL)_D1":"Cl(mmol/L)_D1",
-                  "Fib(gL)_D2":"Fib(g/L)_D2",
-                  "HCO3_D2":"HCO3(mmol/L)_D2",
-                  "Change of white blood cell count":"Change of white blood cell count(*10^9/L)",
-                  "48-hour fluid balance":"48-hour fluid balnce(ml)",
-                  "CTnI(ngml)_D2":"CTnl(ng/ml)_D2",
-                  "BUN(mmolL)_D1":"BUN(mmol/L)_D1",
-                  "DBIL(μmolL)_D2":"DBIL(μmol/L)D2"},inplace=True)
+df.rename(columns={'SOFA':'SOFA',
+                   'PO2/FiO2':'PO2/FiO2(mmHg)',
+                   'K': 'K(mmol/L)',
+                   '24-hour fluid balance':'24-hour fluid balnce(ml)',
+                   'Cr':'Cr(umol/L)',
+                   'D-Dimer':'D-Dimer(mg/L)',
+                   'AST':'AST(IU/L)',
+                   'GLU':'GLU(mmol/L)',
+                   'pH':'pH',},inplace=True)
 
 # Define variables
 continuous_vars = [
-    'FiO2', 'Lym(*10^9/L)_D1', 'Hb(g/L)_D2', 'BUN(mmol/L)_D2', 'Cl(mmol/L)_D1',
-    'PT(s)_D2', 'PTA(%)_D2', 'Fib(g/L)_D2', 'PO2/FiO2(mmHg)_D2', 'HCO3(mmol/L)_D2',
-    'Change of white blood cell count(*10^9/L)', '48-hour fluid balnce(ml)',
-    'APACHE II', 'CTnl(ng/ml)_D2', 'BUN(mmol/L)_D1',
-    'DBIL(μmol/L)D2'
+'SOFA',
+'PO2/FiO2(mmHg)',
+'K(mmol/L)',
+'24-hour fluid balnce(ml)',
+'Cr(umol/L)',
+'D-Dimer(mg/L)',
+'AST(IU/L)',
+'GLU(mmol/L)',
+'pH',
 ]
-categorical_vars = [
-    'Predisposing factors for ARDS', 'Chronic lung disease', 'Respiratory support_D2'
-]
+
 # Combine all variables for unified input
-all_vars = continuous_vars + categorical_vars
+all_vars = continuous_vars 
 
 # Preprocessing pipeline
 preprocessor = ColumnTransformer(
     transformers=[
         ('num', StandardScaler(), continuous_vars),
-        ('cat', OneHotEncoder(handle_unknown='ignore'), categorical_vars)
-    ])
+        ])
 
 # Apply preprocessing
 X_processed = preprocessor.fit_transform(df)
@@ -83,16 +81,16 @@ X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_
 # Centered Title
 st.markdown("<h1 style='text-align: center;'>Support Vector Machine model for predicting ARDS patients with Late acute AKI</h1>", unsafe_allow_html=True)
 
-# --- 1. User Input for X values (Unified, 4 columns) ---
+# --- 1. User Input for X values (Unified, 3 columns) ---
 st.header("1. Enter Patient Data")
 
 user_input = {} # summarize user input data
 input_valid = True # Flag to check if all inputs are valid
-# Create input fields for all variables in 4 columns
+# Create input fields for all variables in 3 columns
 # Combine continuous and categorical for unified handling in layout
-input_cols = st.columns(4) # Changed to 4 columns
+input_cols = st.columns(3) # Changed to 3 columns
 for i, var in enumerate(all_vars):
-    with input_cols[i % 4]: # Cycle through 4 columns
+    with input_cols[i % 3]: # Cycle through 3 columns
         if var in continuous_vars:
             # Handle continuous variables - No default value
             if var =="FiO2":
@@ -122,21 +120,21 @@ for i, var in enumerate(all_vars):
             user_input[var] = selected_option
 
 # --- 2. Model Parameter Display (Fixed, no user selection) ---
-st.header("2. Model Parameters (Fixed)")
+#st.header("2. Model Parameters (Fixed)")
 
 # Display fixed parameters
 # Store fixed parameters
-FIXED_KERNEL = 'linear'
-FIXED_C = 1.0
-FIXED_CLASS_WEIGHT = 'balanced'
+#FIXED_KERNEL = 'linear'
+#FIXED_C = 1.0
+#FIXED_CLASS_WEIGHT = 'balanced'
 
-col1, col2, col3 = st.columns(3)
-with col1:
-    st.metric(label="Kernel", value=FIXED_KERNEL)
-with col2:
-    st.metric(label="Regularization Parameter (C)", value=FIXED_C )
-with col3:
-    st.metric(label="Class Weight", value=FIXED_CLASS_WEIGHT)
+#col1, col2, col3 = st.columns(3)
+#with col1:
+    #st.metric(label="Kernel", value=FIXED_KERNEL)
+#with col2:
+ #   st.metric(label="Regularization Parameter (C)", value=FIXED_C )
+#with col3:
+ #   st.metric(label="Class Weight", value=FIXED_CLASS_WEIGHT)
 
 # --- 3. Prediction Button and Logic ---
 if st.button("Train Model and Predict"):
@@ -150,14 +148,11 @@ if st.button("Train Model and Predict"):
         try:
             # Use the train/test split defined earlier
             # model
-            svc = SVC(
-                kernel=FIXED_KERNEL,
-                C=FIXED_C,
-                class_weight=FIXED_CLASS_WEIGHT,
-                probability=True, # Required for predict_proba
-                random_state=999
-            )
-            svc.fit(X_train, y_train) # Train on the training set
+            model = LogisticRegression(
+            random_state=999,
+            penalty='l2',
+            class_weight='balanced')
+            model.fit(X_train, y_train) # Train on the training set
             st.success("Model trained successfully with fixed parameters!")
 
             # Apply the same preprocessing pipeline to input data
@@ -183,17 +178,15 @@ disclaimer_text = """
 **Disclaimer:**
 
 Supplement:
-*   D1 and D2 represent the first day and the second day after ARDS diagnosis, respectively.
-*   APACHE II and FIO₂ were recorded on the first day after ARDS diagnosis.
-*   Change of white blood cell count was calculated as the difference between the count on D2 and D1.
-*   48-hour fluid balance represents the total intake and output volume during the 2 days after ARDS diagnosis.
-*   Respiratory support_D2_1 = oxygen therapy.
-*   Respiratory support_D2_2 = non-invasive ventilation.
-*   Respiratory support_D2_3 = invasive mechanical ventilation.
-*   Predisposing factors for ARDS_1 = pneumonia.
-*   Predisposing factors for ARDS_0 = other factors.
-*   Chronic lung disease_1 = with Chronic lung disease.
-*   Chronic lung disease_0 = without Chronic lung disease.
+*  AST : Peak AST value within the first 24 hours of ICU admission.
+*  Cr : Peak Cr value within the first 24 hours of ICU admission.
+*  GLU : Peak venous blood glucose level within the first 24 hours of ICU admission.
+*  K+ : Peak serum potassium level within the first 24 hours of ICU admission.
+*  D-Dimer : Peak D-Dimer level within the first 24 hours of ICU admission.
+*  SOFA : SOFA within the first 24 hours of ICU admission.
+*  pH : pH value from arterial blood gas obtained within 24 hours post-ICU admission.
+*  PO2/FiO2 : PO2/FiO2 value from arterial blood gas obtained within 24 hours post-ICU admission.
+*  24-hour fluid balance : The fluid balance (input-output) for the first 24 hours in the ICU.
 """
 st.markdown(disclaimer_text)
 
