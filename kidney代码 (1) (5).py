@@ -91,23 +91,23 @@ for i, var in enumerate(all_vars):
     with input_cols[i % 3]:
         # Handle different variables with appropriate ranges
         if var == "SOFA":
-            user_val = st.number_input(f"{var}", min_value=0.0, max_value=24.0, value=None, step=1.0, placeholder="e.g., 6.0")
+            user_val = st.number_input(f"{var}", value=None, step=1.0, placeholder="e.g., 6.0")
         elif var == "PO2/FiO2(mmHg)":
-            user_val = st.number_input(f"{var}", min_value=0.0, value=None, step=0.01, placeholder="e.g., 200.0")
+            user_val = st.number_input(f"{var}",  value=None, step=0.01, placeholder="e.g., 200.0")
         elif var == "K(mmol/L)":
-            user_val = st.number_input(f"{var}", min_value=0.0, max_value=10.0, value=None, step=0.01, placeholder="e.g., 4.0")
+            user_val = st.number_input(f"{var}", value=None, step=0.01, placeholder="e.g., 4.0")
         elif var == "24-hour fluid balnce(ml)":
             user_val = st.number_input(f"{var}", value=None, step=0.01, placeholder="e.g., 1500.0")
         elif var == "Cr(umol/L)":
-            user_val = st.number_input(f"{var}", min_value=0.0, value=None, step=0.01, placeholder="e.g., 100.0")
+            user_val = st.number_input(f"{var}", value=None, step=0.01, placeholder="e.g., 100.0")
         elif var == "D-Dimer(mg/L)":
-            user_val = st.number_input(f"{var}", min_value=0.0, value=None, step=0.01, placeholder="e.g., 1.5")
+            user_val = st.number_input(f"{var}", value=None, step=0.01, placeholder="e.g., 1.5")
         elif var == "AST(IU/L)":
-            user_val = st.number_input(f"{var}", min_value=0.0, value=None, step=0.01, placeholder="e.g., 40.0")
+            user_val = st.number_input(f"{var}", value=None, step=0.01, placeholder="e.g., 40.0")
         elif var == "GLU(mmol/L)":
-            user_val = st.number_input(f"{var}", min_value=0.0, max_value=50.0, value=None, step=0.01, placeholder="e.g., 6.0")
+            user_val = st.number_input(f"{var}", value=None, step=0.01, placeholder="e.g., 6.0")
         elif var == "pH":
-            user_val = st.number_input(f"{var}", min_value=6.5, max_value=8.0, value=None, step=0.01, placeholder="e.g., 7.4")
+            user_val = st.number_input(f"{var}", value=None, step=0.01, placeholder="e.g., 7.4")
         else:
             user_val = st.number_input(f"{var}", value=None, step=0.01, placeholder="please enter")
         
@@ -122,8 +122,6 @@ st.header("2. Model Parameters")
 st.info("""
 **Model Type:** Logistic Regression with L2 regularization  
 **Class Weight:** Balanced (to handle imbalanced classes)  
-**Test Size:** 30% of data held out for testing  
-**Random State:** 999 (for reproducibility)
 """)
 
 # --- 3. Prediction Button and Logic ---
